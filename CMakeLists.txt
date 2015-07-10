@@ -8,7 +8,7 @@ include_directories ($(ClientConnect_SOURCE_DIR))
 
 ADD_SUBDIRECTORY(lib)
 
-file(GLOB main_sources ./main.c)
+file(GLOB main_sources ./main.cc)
 
 SET(GCC_COVERAGE_COMPILE_FLAGS "-fstack-protector-all -fPIC -finstrument-functions")
 SET(GCC_COVERAGE_LINK_FLAGS    "")      
@@ -22,4 +22,4 @@ find_package(Threads REQUIRED)
 SET( LIBS ${CMAKE_THREAD_LIBS_INIT} )
 
 add_executable(main ${main_sources} )
-target_link_libraries(main ${LIBS} )
+target_link_libraries(main socket ${LIBS} )

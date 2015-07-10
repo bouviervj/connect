@@ -3,16 +3,25 @@
 
 #include <string>
 
-class socket {
+namespace net {
+
+class socketconnect {
 
 public:
-  socket(const std::string& ip, int port);
+  socketconnect(const std::string& ip, int port);
 
 private:
-  
 
+  pthread_t& start(); 	  
+  static void* staticMainPathThread(void *arg);
+  void* mainPathThread();
+
+  int _sockfd; // Socket file descriptor
+  pthread_t _thread;
 
 };
+
+}
 
 #endif
 
