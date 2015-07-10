@@ -22,4 +22,4 @@ find_package(Threads REQUIRED)
 SET( LIBS ${CMAKE_THREAD_LIBS_INIT} )
 
 add_executable(main ${main_sources} )
-target_link_libraries(main socket ${LIBS} )
+target_link_libraries(main socket ArduinoJson ${LIBS} )

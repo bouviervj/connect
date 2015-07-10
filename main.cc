@@ -4,6 +4,23 @@
 #include <unistd.h>
 #include <lib/socket/socket.h>
 
+#include <lib/extern/json/include/ArduinoJson.h>
+
+void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
+
+    DynamicJsonBuffer jsonBuffer;
+
+    JsonObject& root = jsonBuffer.parseObject((char*) msg->_payload.c_str());
+ 
+    const char* from = root["from"];
+    printf("JSON from:%s\n", from);
+
+    msg->_payload = "{\"from\":\"super\", \"to\" : \"test\"}";
+
+    sock->sendMessage(msg);		
+
+}
+
 int main(int argc, char *argv[])
 {
 
@@ -14,6 +31,7 @@ int main(int argc, char *argv[])
     } 
 
     net::socketconnect aSck(argv[1], 5000);
+    aSck.setCallback(&callbackReceiveMessage);
 
     pthread_exit(0);    	    
 
