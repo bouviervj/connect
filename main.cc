@@ -63,16 +63,26 @@ int init(){
 
 }
 
-void executeAction(const std::string& type){
+void executeAction(const std::string& type, const std::string& actioncode){
 
     printf("Trying executing actions #%s#\n",type.c_str());
     if (strcmp(type.c_str(),"light")==0) {
-        printf("switch light\n");
-    	if (gpio_in != NULL && mraa_gpio_read(gpio_in) == 0) {
-            return;
-        }
-        ledstate = !ledstate;
-        mraa_gpio_write(gpio, !ledstate);
+
+	if (strcmp(actioncode.c_str(),"on")==0){
+          ledstate = 0;        
+          mraa_gpio_write(gpio, !ledstate); 
+        } else if (strcmp(actioncode.c_str(),"off")==0){
+          ledstate = 1;
+          mraa_gpio_write(gpio, !ledstate);          
+        } else if (strcmp(actioncode.c_str(),"switch")==0){
+          printf("switch light\n");
+    	  if (gpio_in != NULL && mraa_gpio_read(gpio_in) == 0) {
+             return;
+          }
+          ledstate = !ledstate;
+          mraa_gpio_write(gpio, !ledstate);
+	}
+
     }	
 	
 }
@@ -122,7 +132,8 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
 	  for (int i=0; i<nestedArray.size(); i++) {
 	     const char* type = nestedArray[i]["type"];
 	     printf("Trying executing actions %s\n",type);
-	     executeAction(std::string(type));
+             const char* actioncode = nestedArray[i]["actioncode"];
+	     executeAction(std::string(type), std::string(actioncode));
 	  }
 	
 	} else {
