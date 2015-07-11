@@ -130,7 +130,30 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
           std::string name = getDeviceName();
 
     	  msg->_type = 1;
-    	  msg->_payload = "{\"from\":\""+name+"\", \"to\" : \"test\", \"services\" : [ { \"type\" : \"light\" } ] }";
+
+          DynamicJsonBuffer jsonNewBuffer;
+      
+          JsonObject& rootNew = jsonNewBuffer.createObject();
+          rootNew["from"] = name.c_str();
+          rootNew["to"] = "test";
+      
+          JsonArray& arrayData = rootNew.createNestedArray("services");
+      
+          JsonObject& objectLight = jsonNewBuffer.createObject();
+          objectLight["type"] = "light";
+          JsonArray& actionCodes = objectLight.createNestedArray("actioncodes");
+
+          actionCodes.add("on");
+          actionCodes.add("off");
+          actionCodes.add("switch");
+
+          arrayData.add(objectLight);
+      
+          char buffer[500];
+          memset(buffer, 0, sizeof(buffer));
+          rootNew.printTo(buffer, sizeof(buffer));
+
+    	  msg->_payload = std::string(buffer, strlen(buffer));
 	  sock->sendMessage(msg);
     
     	}
