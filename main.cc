@@ -15,6 +15,7 @@
 #include <netinet/in.h>
 #include <net/if.h>
 #include <arpa/inet.h>
+#include <math.h>
 
 mraa_platform_t platform;
 mraa_gpio_context gpio, gpio_in = NULL;
@@ -38,7 +39,8 @@ int init(){
 	    gpio = mraa_gpio_init(21);
             break;
         default:
-            gpio = mraa_gpio_init(13);
+            //pin 13 for on board light - 8 for relay
+            gpio = mraa_gpio_init(8);
     }
 
     fprintf(stdout, "Welcome to libmraa\n Version: %s\n Running on %s\n",
@@ -75,7 +77,30 @@ int initAnalog()
     return MRAA_SUCCESS;
 }
 
-void executeAction(const std::string& type, const std::string& actioncode){
+std::string getDeviceName(){
+
+    int fd;
+ struct ifreq ifr;
+
+ fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+ /* I want to get an IPv4 IP address */
+ ifr.ifr_addr.sa_family = AF_INET;
+
+ /* I want IP address attached to "eth0" */
+ strncpy(ifr.ifr_name, "wlan0", IFNAMSIZ-1);
+
+ ioctl(fd, SIOCGIFADDR, &ifr);
+
+ close(fd);
+
+ /* display result */
+ printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+
+ return std::string(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+}
+
+void executeAction(const std::string& type, const std::string& actioncode, net::socketconnect* sock, net::message* msg, const std::string& from){
 
     printf("Trying executing actions #%s#\n",type.c_str());
     if (strcmp(type.c_str(),"light")==0) {
@@ -99,34 +124,52 @@ void executeAction(const std::string& type, const std::string& actioncode){
     if (strcmp(type.c_str(),"temperature")==0) {
         uint16_t adc_value = mraa_aio_read(adc_a0);
         float adc_value_float = mraa_aio_read_float(adc_a0);
+        
+        // Define the B-value of the thermistor
+        // Used to convert from the analog value it measures and a temperature value
+        const int B = 3975;
+
+        // Determine the current resistance of the thermistor based on the sensor value.
+        float resistance = (float)(1023-adc_value)*10000/adc_value;
+
+        // Calculate the temperature based on the resistance value.
+        float tempValueCelcius = 1/(log(resistance/10000)/B+1/298.15)-273.15;
+        float tempValueFahrenheit = tempValueCelcius*9/5 + 32;
+
         printf("ADC A0 read %X - %d\n", adc_value, adc_value);
-        printf("ADC A0 read float - %.5f\n", adc_value_float);
+        printf("ADC A0 read float - %.2f\n", adc_value_float);
+        printf("Temperature Celsius %.2f\n", tempValueCelcius);
+        printf("Temperature Fahrenheit %.2f\n", tempValueFahrenheit);
+
+        std::string name = getDeviceName();
+
+        msg->_type = 1;
+
+        char tempValueStr[10];
+        memset(tempValueStr, 0, sizeof(tempValueStr));
+        sprintf(tempValueStr, "%.2f", tempValueFahrenheit);
+
+        DynamicJsonBuffer jsonNewBuffer;
+
+        JsonObject& rootNew = jsonNewBuffer.createObject();
+        rootNew["from"] = name.c_str();
+        rootNew["to"] = from.c_str();
+
+        JsonArray& arrayData = rootNew.createNestedArray("actions");
+  
+        JsonObject& objectTemperature = jsonNewBuffer.createObject();
+        objectTemperature["type"] = "temperature";
+        objectTemperature["value"] = tempValueStr;
+        arrayData.add(objectTemperature);
+  
+        char buffer[500];
+        memset(buffer, 0, sizeof(buffer));
+        rootNew.printTo(buffer, sizeof(buffer));
+
+        msg->_payload = std::string(buffer, strlen(buffer));
+        sock->sendMessage(msg);
     }	
 	
-}
-
-std::string getDeviceName(){
-
-    int fd;
- struct ifreq ifr;
-
- fd = socket(AF_INET, SOCK_DGRAM, 0);
-
- /* I want to get an IPv4 IP address */
- ifr.ifr_addr.sa_family = AF_INET;
-
- /* I want IP address attached to "eth0" */
- strncpy(ifr.ifr_name, "wlan0", IFNAMSIZ-1);
-
- ioctl(fd, SIOCGIFADDR, &ifr);
-
- close(fd);
-
- /* display result */
- printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-
- return std::string(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
-
 }
 
 void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
@@ -141,17 +184,18 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
     if (msg->_type==0) {
     	
 	
-	if (root.containsKey("actions")) {
+	if (root.containsKey("actions") && root.containsKey("from")) {
 	
 	  printf("Need to execute action(s)\n");
 	
 	  JsonArray& nestedArray = root["actions"];
-	  
+	  const char* from = root["from"];
+
 	  for (int i=0; i<nestedArray.size(); i++) {
 	     const char* type = nestedArray[i]["type"];
 	     printf("Trying executing actions %s\n",type);
              const char* actioncode = nestedArray[i]["actioncode"];
-	     executeAction(std::string(type), std::string(actioncode));
+	     executeAction(std::string(type), std::string(actioncode), sock, msg, std::string(from));
 	  }
 	
 	} else {
