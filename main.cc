@@ -15,7 +15,8 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
     const char* from = root["from"];
     printf("JSON from:%s\n", from);
 
-    msg->_payload = "{\"from\":\"super\", \"to\" : \"test\"}";
+    msg->_type = 1;
+    msg->_payload = "{\"from\":\"super\", \"to\" : \"test\", \"services\" : [ { \"type\" : \"light\" } ] }";
 
     sock->sendMessage(msg);		
 
