@@ -8,9 +8,16 @@
 
 #include "mraa/gpio.h"
 
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <sys/ioctl.h>
+#include <netinet/in.h>
+#include <net/if.h>
+#include <arpa/inet.h>
+
 mraa_platform_t platform;
 mraa_gpio_context gpio, gpio_in = NULL;
-int ledstate = 0;
+int ledstate = 1;
 
 int init(){
 
@@ -70,6 +77,30 @@ void executeAction(const std::string& type){
 	
 }
 
+std::string getDeviceName(){
+
+    int fd;
+ struct ifreq ifr;
+
+ fd = socket(AF_INET, SOCK_DGRAM, 0);
+
+ /* I want to get an IPv4 IP address */
+ ifr.ifr_addr.sa_family = AF_INET;
+
+ /* I want IP address attached to "eth0" */
+ strncpy(ifr.ifr_name, "wlan0", IFNAMSIZ-1);
+
+ ioctl(fd, SIOCGIFADDR, &ifr);
+
+ close(fd);
+
+ /* display result */
+ printf("%s\n", inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+
+ return std::string(inet_ntoa(((struct sockaddr_in *)&ifr.ifr_addr)->sin_addr));
+
+}
+
 void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
 
     DynamicJsonBuffer jsonBuffer;
@@ -96,8 +127,10 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
 	
 	} else {
 	
+          std::string name = getDeviceName();
+
     	  msg->_type = 1;
-    	  msg->_payload = "{\"from\":\"super\", \"to\" : \"test\", \"services\" : [ { \"type\" : \"light\" } ] }";
+    	  msg->_payload = "{\"from\":\""+name+"\", \"to\" : \"test\", \"services\" : [ { \"type\" : \"light\" } ] }";
 	  sock->sendMessage(msg);
     
     	}
