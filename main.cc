@@ -170,7 +170,7 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
       
           JsonObject& objectLight = jsonNewBuffer.createObject();
           objectLight["type"] = "light";
-          objectLight["reply"] = "true";
+          objectLight["reply"] = "false";
           JsonArray& actionCodesLight = objectLight.createNestedArray("actioncodes");
 
           actionCodesLight.add("on");
