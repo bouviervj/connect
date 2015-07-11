@@ -170,6 +170,7 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
       
           JsonObject& objectLight = jsonNewBuffer.createObject();
           objectLight["type"] = "light";
+          objectLight["reply"] = "true";
           JsonArray& actionCodesLight = objectLight.createNestedArray("actioncodes");
 
           actionCodesLight.add("on");
@@ -180,6 +181,7 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
 
           JsonObject& objectTemperature = jsonNewBuffer.createObject();
           objectTemperature["type"] = "temperature";
+          objectTemperature["reply"] = "true";
           JsonArray& actionCodesTemperature = objectTemperature.createNestedArray("actioncodes");
 
           actionCodesTemperature.add("retrieve");
