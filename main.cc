@@ -7,6 +7,7 @@
 #include <lib/extern/json/include/ArduinoJson.h>
 
 #include "mraa/gpio.h"
+#include "mraa/aio.h"
 
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -17,6 +18,7 @@
 
 mraa_platform_t platform;
 mraa_gpio_context gpio, gpio_in = NULL;
+mraa_aio_context adc_a0;
 int ledstate = 1;
 
 int init(){
@@ -63,6 +65,16 @@ int init(){
 
 }
 
+int initAnalog()
+{
+    adc_a0 = mraa_aio_init(0);
+    if (adc_a0 == NULL) {
+        return 1;
+    }
+    
+    return MRAA_SUCCESS;
+}
+
 void executeAction(const std::string& type, const std::string& actioncode){
 
     printf("Trying executing actions #%s#\n",type.c_str());
@@ -83,6 +95,12 @@ void executeAction(const std::string& type, const std::string& actioncode){
           mraa_gpio_write(gpio, !ledstate);
 	}
 
+    }
+    if (strcmp(type.c_str(),"temperature")==0) {
+        uint16_t adc_value = mraa_aio_read(adc_a0);
+        float adc_value_float = mraa_aio_read_float(adc_a0);
+        printf("ADC A0 read %X - %d\n", adc_value, adc_value);
+        printf("ADC A0 read float - %.5f\n", adc_value_float);
     }	
 	
 }
@@ -152,13 +170,21 @@ void callbackReceiveMessage(net::socketconnect* sock, net::message* msg){
       
           JsonObject& objectLight = jsonNewBuffer.createObject();
           objectLight["type"] = "light";
-          JsonArray& actionCodes = objectLight.createNestedArray("actioncodes");
+          JsonArray& actionCodesLight = objectLight.createNestedArray("actioncodes");
 
-          actionCodes.add("on");
-          actionCodes.add("off");
-          actionCodes.add("switch");
+          actionCodesLight.add("on");
+          actionCodesLight.add("off");
+          actionCodesLight.add("switch");
 
           arrayData.add(objectLight);
+
+          JsonObject& objectTemperature = jsonNewBuffer.createObject();
+          objectTemperature["type"] = "temperature";
+          JsonArray& actionCodesTemperature = objectTemperature.createNestedArray("actioncodes");
+
+          actionCodesTemperature.add("retrieve");
+
+          arrayData.add(objectTemperature);
       
           char buffer[500];
           memset(buffer, 0, sizeof(buffer));
@@ -185,6 +211,7 @@ int main(int argc, char *argv[])
     } 
 
     init();
+    initAnalog();
 
     net::socketconnect aSck(argv[1], 5000);
     aSck.setCallback(&callbackReceiveMessage);
