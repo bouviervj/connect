@@ -19,7 +19,12 @@ SET( CMAKE_INCLUDE_PATH "${CMAKE_INCLUDE_PATH} ${GCC_COVERAGE_INCLUDE}" )
 
 find_package(Threads REQUIRED)
 
+#add_library( mraa SHARED IMPORTED )
+#set_target_properties( mraa PROPERTIES IMPORTED_LOCATION (${CMAKE_BINARY_DIR}/../mraa) )
+
+include_directories(${PROJECT_SOURCE_DIR}/../mraa/api)
+
 SET( LIBS ${CMAKE_THREAD_LIBS_INIT} )
 
 add_executable(main ${main_sources} )
-target_link_libraries(main socket ArduinoJson ${LIBS} )
+target_link_libraries(main socket ArduinoJson mraa ${LIBS} )
